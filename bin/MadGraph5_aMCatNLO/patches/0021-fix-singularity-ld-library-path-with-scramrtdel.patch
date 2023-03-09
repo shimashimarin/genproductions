@@ -131,7 +131,7 @@
  
 --- a/Template/NLO/SubProcesses/ajob_template
 +++ b/Template/NLO/SubProcesses/ajob_template
-@@ -12,6 +12,22 @@ if [ $CLUSTER_LHAPATH ]; then
+@@ -22,6 +22,22 @@ if [ $CLUSTER_LHAPATH ]; then
     export LHAPATH=$CLUSTER_LHAPATH;
  fi
  
@@ -154,8 +154,8 @@
  tarCounter=0
  while [[ (-f MadLoop5_resources.tar.gz) && (! -f MadLoop5_resources/HelConfigs.dat) && ($tarCounter < 10) ]]; do
      if [[ $tarCounter > 0 ]]; then
-@@ -97,6 +113,13 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
-         ../madevent_mintMC > log.txt <input_app.txt 2>&1
+@@ -120,6 +120,13 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
+ 
      fi
      status=$?
 +    if [[ $status -ne 0 ]]; then
@@ -167,10 +167,10 @@
 +    fi
      T="$(($(date +%s)-T))"
      echo "Time in seconds: ${T}" >>log.txt
-     cp -f log.txt log_MINT$integration_step.txt  >/dev/null 2>&1
+     if [[ $nolog = 0 ]]; then
 --- a/Template/NLO/SubProcesses/reweight_xsec_events.local
 +++ b/Template/NLO/SubProcesses/reweight_xsec_events.local
-@@ -8,6 +8,22 @@ if [ $CLUSTER_LHAPATH ]; then
+@@ -22,6 +22,22 @@ if [ $CLUSTER_LHAPATH ]; then
    export LHAPATH=$CLUSTER_LHAPATH;
  fi
  

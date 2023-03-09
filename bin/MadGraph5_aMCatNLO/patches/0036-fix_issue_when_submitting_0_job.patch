@@ -2,7 +2,7 @@ diff --git a/MG5_aMC_v2_9_13/madgraph/interface/amcatnlo_run_interface.py b/MG5_
 index f8b611b..2aff879 100755
 --- a/madgraph/interface/amcatnlo_run_interface.py
 +++ b/madgraph/interface/amcatnlo_run_interface.py
-@@ -3910,8 +3910,8 @@ RESTART = %(mint_mode)s
+@@ -3971,8 +3971,8 @@ RESTART = %(mint_mode)s
              arg_list = [[shower, out_id, self.run_name]]
  
          self.run_all({rundir: 'shower.sh'}, arg_list, 'shower')
@@ -13,7 +13,7 @@ index f8b611b..2aff879 100755
  
          # now collect the results
          message = ''
-@@ -4739,7 +4739,8 @@ RESTART = %(mint_mode)s
+@@ -4822,7 +4822,8 @@ RESTART = %(mint_mode)s
                  [(cwd, exe)] = list(job_dict.items())
                  self.run_exe(exe, args, run_type, cwd)
          
@@ -53,27 +53,22 @@ index c318415..8be527e 100755
              out = os.system('kill -15 %(pid)s > /dev/null 2>&1' % {'pid':pid} )   
              
 -        self.demons.clear()               
-+        self.demons[:] = [] 
++        self.demons[:] = []               
  
  
      def wait(self, me_dir, update_status, update_first=None):
-@@ -837,9 +843,10 @@ class MultiCore(Cluster):
-                     raise self.fail_msg
-                 elif isinstance(self.fail_msg, str):
-                     raise Exception(self.fail_msg)
--                else:
-+                elif self.fail_msg:
+@@ -840,6 +846,7 @@ class MultiCore(Cluster):
+                 elif self.fail_msg:
                      misc.sprint(self.fail_msg)
                      six.reraise(self.fail_msg[0], self.fail_msg[1], self.fail_msg[2])
 +                #else can happen if nothing was submitted
              # reset variable for next submission
              try:
                  self.lock.clear()
-@@ -1683,8 +1690,14 @@ class SLURMCluster(Cluster):
+@@ -1683,7 +1690,13 @@ class SLURMCluster(Cluster):
          """Submit a job prog to a SLURM cluster"""
          
          me_dir = self.get_jobs_identifier(cwd, prog)
--        
 -        
 +        import sys
 +        if prog == sys.executable:
@@ -82,10 +77,9 @@ index c318415..8be527e 100755
 +                prog = pjoin(LOCALDIR,'bin','internal','eval.sh') 
 +            else:
 +                prog = pjoin(MG5DIR, 'Template','Common','bin','internal','eval.sh')
-+
+         
          if cwd is None:
              cwd = os.getcwd()
-         if stdout is None:
 @@ -1700,10 +1713,13 @@ class SLURMCluster(Cluster):
                     '-J', me_dir, 
                     '-e', stderr, prog] + argument
