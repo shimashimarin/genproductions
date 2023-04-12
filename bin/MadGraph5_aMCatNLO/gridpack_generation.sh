@@ -26,20 +26,20 @@ make_tarball () {
     cd $WORKDIR/gridpack
     # [ NLO_Gridpack ] ReadOnly mode
     # chmod -R 555 process
-    
+
     if [ $iscmsconnect -gt 0 ]; then
         XZ_OPT="--lzma2=preset=2,dict=256MiB"
     else
         XZ_OPT="--lzma2=preset=9,dict=512MiB"
     fi
-    
+
     mkdir InputCards
     cp $CARDSDIR/${name}*.* InputCards
-    
+
     if [ -e $CARDSDIR/BIAS ]; then
         cp -r $CARDSDIR/BIAS InputCards/
     fi
-    
+
     EXTRA_TAR_ARGS=""
     if [ -e $CARDSDIR/${name}_externaltarball.dat ]; then
         EXTRA_TAR_ARGS="external_tarball header_for_madspin.txt "
@@ -49,13 +49,13 @@ make_tarball () {
         EXTRA_TAR_ARGS+="merge.pl "
     fi
     # [ NLO_Gridpack ] ReadOnly mode
-    chmod -R 555 $WORKDIR/gridpack 
+    chmod -R 555 $WORKDIR/gridpack
     XZ_OPT="$XZ_OPT" tar -cJpf ${PRODHOME}/${name}_${scram_arch}_${cmssw_version}_tarball.tar.xz mgbasedir process runcmsgrid.sh gridpack_generation*.log InputCards $EXTRA_TAR_ARGS
     # [ NLO_Gridpack ] Remove ReadOnly of the directory
-    chmod -R 777 $WORKDIR/gridpack    
+    chmod -R 777 $WORKDIR/gridpack
     echo "Gridpack created successfully at ${PRODHOME}/${name}_${scram_arch}_${cmssw_version}_tarball.tar.xz"
     echo "End of job"
-    
+
     if [ "${BASH_SOURCE[0]}" != "${0}" ]; then return 0; else exit 0; fi
 }
 
@@ -63,32 +63,32 @@ make_gridpack () {
     echo "Starting job on " `date` #Only to display the starting of production date
     echo "Running on " `uname -a` #Only to display the machine where the job is running
     echo "System release " `cat /etc/redhat-release` #And the system release
-    
+
     echo "name: ${name}"
     echo "carddir: ${carddir}"
     echo "queue: ${queue}"
     echo "scram_arch: ${scram_arch}"
     echo "cmssw_version: ${cmssw_version}"
-    
+
     ########################
     #Locating the proc card#
     ########################
-    
+
     if [ ! -d $CARDSDIR ]; then
         echo $CARDSDIR " does not exist!"
         if [ "${BASH_SOURCE[0]}" != "${0}" ]; then return 1; else exit 1; fi
     fi
-    
+
     if [ ! -e $CARDSDIR/${name}_proc_card.dat ]; then
         echo $CARDSDIR/${name}_proc_card.dat " does not exist!"
         if [ "${BASH_SOURCE[0]}" != "${0}" ]; then return 1; else exit 1; fi
     fi
-    
+
     if [ ! -e $CARDSDIR/${name}_run_card.dat ]; then
         echo $CARDSDIR/${name}_run_card.dat " does not exist!"
         if [ "${BASH_SOURCE[0]}" != "${0}" ]; then return 1; else exit 1; fi
     fi
-    
+
     # avoid compute_widths in customizecards
     if [ -e $CARDSDIR/${name}_customizecards.dat ]; then
         if grep -F "compute_widths" $CARDSDIR/${name}_customizecards.dat ; then
@@ -98,7 +98,7 @@ make_gridpack () {
             exit 1;
         fi
     fi
-    
+
     # avoid compute_widths in customizecards
     if [ -e $CARDSDIR/${name}_madspin_card.dat ]; then
         if grep -F "Nevents_for_max_weigth" $CARDSDIR/${name}_madspin_card.dat ; then
@@ -108,7 +108,7 @@ make_gridpack () {
             exit 1;
         fi
     fi
-    
+
     # avoid characters in weight names that potentially corrupt lhe header
     if [ -e $CARDSDIR/${name}_reweight_card.dat ]; then
         for weightname in `grep rwgt_name $CARDSDIR/${name}_reweight_card.dat` ; do
@@ -124,7 +124,7 @@ make_gridpack () {
             fi
         done
     fi
-    
+
     # CMS Connect runs git status inside its own script.
     if [ $iscmsconnect -eq 0 ]; then
         cd $PRODHOME
@@ -136,10 +136,10 @@ make_gridpack () {
         fi
         cd -
     fi
-    
+
     # where to find the madgraph tarred distribution
     MGBASEDIR=mgbasedir
-    
+
     MG_EXT=".tar.gz"
     MG=MG5_aMC_v2.9.13$MG_EXT
     # MGSOURCE=https://cms-project-generators.web.cern.ch/cms-project-generators/$MG
@@ -147,19 +147,19 @@ make_gridpack () {
 
     MGBASEDIRORIG=$(echo ${MG%$MG_EXT} | tr "." "_")
     isscratchspace=0
-    
+
     if [ ! -d ${GEN_FOLDER}/${name}_gridpack ]; then
         #directory doesn't exist, create it and set up environment
-        
+
         if [ ! -d ${GEN_FOLDER} ]; then
             mkdir ${GEN_FOLDER}
         fi
-        
+
         cd $GEN_FOLDER
-        
+
         export SCRAM_ARCH=${scram_arch}
         export RELEASE=${cmssw_version}
-        
+
         ############################
         #Create a workplace to work#
         ############################
@@ -167,21 +167,21 @@ make_gridpack () {
         set +u
         source $VO_CMS_SW_DIR/cmsset_default.sh
         set -u
-        
+
         scram project -n ${name}_gridpack CMSSW ${RELEASE} ;
         if [ ! -d ${name}_gridpack ]; then
             if [ "${BASH_SOURCE[0]}" != "${0}" ]; then echo "yes here"; return 1; else exit 1; fi
         fi
-        
+
         cd ${name}_gridpack ; mkdir -p work ; cd work
         WORKDIR=`pwd`
         eval `scram runtime -sh`
-        
+
         if [[ $queue == *"condor"* ]]; then
             echo "Use HTCondor for gridpack generation"
             source ${PRODHOME}/Utilities/source_condor.sh
         fi
-        
+
         #############################################
         #Copy, Unzip and Delete the MadGraph tarball#
         #############################################
@@ -189,11 +189,11 @@ make_gridpack () {
         # tar axf mg5amcnlo.tar.gz
         tar axf /eos/lyoeos.in2p3.fr/home/jxiao/gen/mg5amcnlo.tar.gz
         mv mg5amcnlo $MGBASEDIRORIG
-        
+
         #############################################
         #Apply any necessary patches on top of official release
         #############################################
-        
+
         cd $MGBASEDIRORIG
         cat $PRODHOME/patches/*.patch | patch -p1
         cp -r $PRODHOME/PLUGIN/CMS_CLUSTER/ PLUGIN/
@@ -202,7 +202,7 @@ make_gridpack () {
             echo "    WARNING: Applying custom user patch. I hope you know what you're doing!"
             cat $CARDSDIR/${name}*.patch | patch -p1
         fi
-        
+
         # Copy bias module (cp3.irmp.ucl.ac.be/projects/madgraph/wiki/LOEventGenerationBias)
         # Expected structure:
         # $CARDSDIR/BIAS/{module_name}/...
@@ -215,12 +215,12 @@ make_gridpack () {
             ls -lrth
             cp -r $CARDSDIR/BIAS/* $MGBASEDIRORIG/Template/LO/Source/BIAS
         fi
-        
+
         LHAPDFCONFIG=`echo "$LHAPDF_DATA_PATH/../../bin/lhapdf-config"`
-        
+
         LHAPDFINCLUDES=`$LHAPDFCONFIG --incdir`
         LHAPDFLIBS=`$LHAPDFCONFIG --libdir`
-        
+
         echo "set auto_update 0" > mgconfigscript
         echo "set automatic_html_opening False" >> mgconfigscript
         echo "set auto_convert_model True" >> mgconfigscript
@@ -230,7 +230,7 @@ make_gridpack () {
         #  echo "set output_dependencies internal" >> mgconfigscript
         echo "set lhapdf_py3 $LHAPDFCONFIG" >> mgconfigscript
         #   echo "set ninja $PWD/HEPTools/lib" >> mgconfigscript
-        
+
         if [ "$queue" == "local" ]; then
             echo "set run_mode 2" >> mgconfigscript
             elif [ "$queue" == "pdmv" ]; then
@@ -239,7 +239,7 @@ make_gridpack () {
         else
             #suppress lsf emails
             export LSB_JOB_REPORT_MAIL="N"
-            
+
             echo "set run_mode  1" >> mgconfigscript
             if [ "$queue" == "condor" ]; then
                 echo "set cluster_type cms_condor" >> mgconfigscript
@@ -273,11 +273,11 @@ make_gridpack () {
                 isscratchspace=1
             fi
         fi
-        
+
         echo "save options" >> mgconfigscript
-        
+
         ./bin/mg5_aMC mgconfigscript
-        
+
         #load extra models if needed
         if [ -e $CARDSDIR/${name}_extramodels.dat ]; then
             echo "Loading extra models specified in $CARDSDIR/${name}_extramodels.dat"
@@ -302,33 +302,33 @@ make_gridpack () {
                 fi
             done
         fi
-        
+
         cd $WORKDIR
-        
+
         if [ "$name" == "interactive" ]; then
             set +e
             set +u
             if [ "${BASH_SOURCE[0]}" != "${0}" ]; then return 0; else exit 0; fi
         fi
-        
+
         echo `pwd`
-        
+
         cp $CARDSDIR/${name}_proc_card.dat ${name}_proc_card.dat
         # [NLO_Gridpack] detect NLO mode or LO mode
         isnlo=0
         # [NLO_Gridpack] use regexpr: should find one line starts with "generate" and also includes "[QCD]"
         while read -r line; do if [[ "$line" =~ ^(\s*generate.+)(\[QCD].+) ]]; then isnlo=1; echo "NLO mode detected from: "$line" ===> isnlo="$isnlo; fi done < ${name}_proc_card.dat
-        
+
         #*FIXME* workaround for broken cluster_local_path & lhapdf_py3 handling.
         # This needs to happen before the code-generation step, as fortran templates
         # are modified based on this parameter.
         echo "cluster_local_path = `${LHAPDFCONFIG} --datadir`" >> ./$MGBASEDIRORIG/input/mg5_configuration.txt
         echo "lhapdf_py3 = $LHAPDFCONFIG" >> ./$MGBASEDIRORIG/input/mg5_configuration.txt
-        
+
         ########################
         #Run the code-generation step to create the process directory
         ########################
-        
+
         sed -i '$ a display multiparticles' ${name}_proc_card.dat
 
         #check if MadSTR plugin is needed (DR/DS removal,  https://arxiv.org/pdf/1907.04898.pdf)
@@ -348,12 +348,12 @@ make_gridpack () {
             cp -r $PRODHOME/PLUGIN/MadSTR $MGBASEDIRORIG/PLUGIN/ # copy plugin
             ./$MGBASEDIRORIG/bin/mg5_aMC --mode=MadSTR ${name}_proc_card.dat # run invoking MadSTR plugin
         fi
-        
+
         is5FlavorScheme=0
         if tail -n 20 $LOGFILE | grep -q -e "^p *=.*b\~.*b" -e "^p *=.*b.*b\~"; then
             is5FlavorScheme=1
         fi
-        
+
         #*FIXME* workaround for broken set cluster_queue and run_mode handling
         if [ "$queue" != "condor" ]; then
             echo "cluster_queue = $queue" >> ./$MGBASEDIRORIG/input/mg5_configuration.txt
@@ -369,26 +369,26 @@ make_gridpack () {
             echo "run_mode = 1" >> ./$MGBASEDIRORIG/input/mg5_configuration.txt
             echo "cluster_type = cms_condor_spool" >> ./$MGBASEDIRORIG/input/mg5_configuration.txt
         fi
-        
+
         # Previous settings get erased after
         # code-generation mg5_aMC execution, set it up again before the integrate step.
         echo "cluster_local_path = `${LHAPDFCONFIG} --datadir`" >> ./$MGBASEDIRORIG/input/mg5_configuration.txt
         echo "lhapdf_py3 = $LHAPDFCONFIG" >> ./$MGBASEDIRORIG/input/mg5_configuration.txt
-        
+
         if [ -e $CARDSDIR/${name}_patch_me.sh ]; then
             echo "Patching generated matrix element code with " $CARDSDIR/${name}_patch_me.sh
             /bin/bash "$CARDSDIR/${name}_patch_me.sh" "$WORKDIR/$MGBASEDIRORIG"
         fi;
-        
+
         if [ "${jobstep}" = "CODEGEN" ]; then
             echo "job finished step ${jobstep}, exiting now."
             if [ "${BASH_SOURCE[0]}" != "${0}" ]; then return 0; else exit 0; fi
         fi
-        
+
         elif [ "${jobstep}" = "INTEGRATE" ] || [ "${jobstep}" = "ALL" ]; then
         echo "Reusing existing directory assuming generated code already exists"
         echo "WARNING: If you changed the process card you need to clean the folder and run from scratch"
-        
+
         if [ "$is5FlavorScheme" -eq -1 ]; then
             if grep -q -e "^p *=.*b\~.*b" -e "^p *=.*b.*b\~" $LOGFILE_NAME*.log; then
                 is5FlavorScheme=1
@@ -396,24 +396,24 @@ make_gridpack () {
                 is5FlavorScheme=0
             fi
         fi
-        
+
         cd $GEN_FOLDER
-        
+
         if [ ! -d ${WORKDIR} ]; then
             echo "Existing directory does not contain expected folder $WORKDIR"
             if [ "${BASH_SOURCE[0]}" != "${0}" ]; then return 1; else exit 1; fi
         fi
         cd $WORKDIR
-        
+
         eval `scram runtime -sh`
         export BOOSTINCLUDES=`scram tool tag boost INCLUDE`
-        
+
         # need to source condor once more if the codegen & integrate steps are separated
         if [[ $queue == *"condor"* ]]; then
             echo "Use HTCondor for gridpack generation"
             source ${PRODHOME}/Utilities/source_condor.sh
         fi
-        
+
         #if lhapdf6 external is available then above points to lhapdf5 and needs to be overridden
         LHAPDF6TOOLFILE=$CMSSW_BASE/config/toolbox/$SCRAM_ARCH/tools/available/lhapdf6.xml
         if [ -e $LHAPDF6TOOLFILE ]; then
@@ -421,11 +421,11 @@ make_gridpack () {
         else
             LHAPDFCONFIG=`echo "$LHAPDF_DATA_PATH/../../bin/lhapdf-config"`
         fi
-        
+
         #make sure env variable for pdfsets points to the right place
         export LHAPDF_DATA_PATH=`$LHAPDFCONFIG --datadir`
-        
-        
+
+
         if [ "$name" == "interactive" ]; then
             set +e
             set +u
@@ -438,26 +438,26 @@ make_gridpack () {
                 if [ "${BASH_SOURCE[0]}" != "${0}" ]; then return 1; else exit 1; fi
             fi
         fi
-        
+
     fi
-    
+
     if [ -d gridpack ]; then
         rm -rf gridpack
     fi
-    
+
     if [ -d processtmp ]; then
         rm -rf processtmp
     fi
-    
+
     if [ -d process ]; then
         rm -rf process
     fi
-    
+
     if [ ! -d ${name} ]; then
         echo "Process output directory ${name} not found.  Either process generation failed, or the name of the output did not match the process name ${name} provided to the script."
         if [ "${BASH_SOURCE[0]}" != "${0}" ]; then return 1; else exit 1; fi
     fi
-    
+
     #make copy of process directory for reuse only if not running on temp scratch space
     if [ "$isscratchspace" -gt "0" ]; then
         echo "moving generated process to working directory"
@@ -466,9 +466,9 @@ make_gridpack () {
         echo "copying generated process to working directory"
         cp -a $name/ processtmp
     fi
-    
+
     cd processtmp
-    
+
     #################################
     #Add PDF info and copy run card #
     #################################
@@ -480,7 +480,7 @@ make_gridpack () {
             script_dir=$(git rev-parse --show-toplevel)/Utilities/scripts
         fi
     fi
-    
+
     prepare_run_card $name $CARDSDIR $is5FlavorScheme $script_dir $isnlo
     # [NLO_Gridpack] nevents should be 0 to generate run.sh in NLO mode
     if [ "$isnlo" -gt "0" ]; then
@@ -492,42 +492,42 @@ make_gridpack () {
         echo "copying custom cuts.f file"
         cp $CARDSDIR/${name}_cuts.f ./SubProcesses/cuts.f
     fi
-    
+
     if [ -e $CARDSDIR/${name}_FKS_params.dat ]; then
         echo "copying custom FKS_params.dat file"
         cp $CARDSDIR/${name}_FKS_params.dat ./Cards/FKS_params.dat
     fi
-    
+
     if [ -e $CARDSDIR/${name}_setscales.f ]; then
         echo "copying custom setscales.f file"
         cp $CARDSDIR/${name}_setscales.f ./SubProcesses/setscales.f
     fi
-    
+
     if [ -e $CARDSDIR/${name}_reweight_xsec.f ]; then
         echo "copying custom reweight_xsec.f file"
         cp $CARDSDIR/${name}_reweight_xsec.f ./SubProcesses/reweight_xsec.f
     fi
-    
+
     if [ -e $CARDSDIR/${name}_reweight_card.dat ]; then
         echo "copying custom reweight file"
         cp $CARDSDIR/${name}_reweight_card.dat ./Cards/reweight_card.dat
     fi
-    
+
     if [ -e $CARDSDIR/${name}_param_card.dat ]; then
         echo "copying custom params file"
         cp $CARDSDIR/${name}_param_card.dat ./Cards/param_card.dat
     fi
-    
+
     if [ "$isnlo" -gt "0" ]; then
         #NLO mode
         #######################
         #Run the integration and generate the grid
         #######################
         echo "starting NLO mode"
-        
+
         if [ -e $CARDSDIR/${name}_madspin_card.dat ]; then
             cp $CARDSDIR/${name}_madspin_card.dat ./Cards/madspin_card.dat
-            # [NLO_Gridpack] set the ms_dir to ../../process/madspin 
+            # [NLO_Gridpack] set the ms_dir to ../../process/madspin
             sed -i "s/^\s*set\s*ms_dir.*$/set ms_dir ..\/..\/process\/madspin/" ./Cards/madspin_card.dat
             mv ./Cards/madspin_card.dat ./Cards/tmp_madspin_card
         fi
@@ -547,7 +547,7 @@ make_gridpack () {
             echo "" >> makegrid.dat
         fi
         echo "done" >> makegrid.dat
-        
+
         # [NLO_Gridpack] use bin/mg5_aMC rather than bin/generate_events
         cat makegrid.dat | ./bin/generate_events -n run_01
         # Run this step separately in debug mode since it gives so many problems
@@ -578,31 +578,31 @@ make_gridpack () {
         fi
         cd $WORKDIR/process
         # rm -rf $WORKDIR/tmp_gridpack # for debug
-        # 
+        #
         if [ -e $CARDSDIR/${name}_externaltarball.dat ]; then
             gunzip ./Events/pilotrun_decayed_1/events.lhe.gz
             sed -n '/<MG5ProcCard>/,/<\/slha>/p' ./Events/pilotrun_decayed_1/events.lhe > header_for_madspin.txt
             mv header_for_madspin.txt $WORKDIR
             gzip ./Events/pilotrun_decayed_1/events.lhe
         fi
-        
+
         echo "mg5_path = ../mgbasedir" >> ./Cards/amcatnlo_configuration.txt
         #   echo "ninja = ../mgbasedir/HEPTools/lib" >> ./Cards/amcatnlo_configuration.txt
         echo "cluster_temp_path = None" >> ./Cards/amcatnlo_configuration.txt
-        
+
         cd $WORKDIR
-        
+
         mkdir gridpack
-        
+
         mv process gridpack/
         # [ NLO_Gridpack ]
         # chmod -R 555 gridpack/process
         cp -a $MGBASEDIRORIG gridpack/mgbasedir
-        
+
         cd gridpack
-        
+
         cp $PRODHOME/runcmsgrid_NLO.sh ./runcmsgrid.sh
-        
+
         if [ -e $CARDSDIR/${name}_externaltarball.dat ]; then
             mv $WORKDIR/header_for_madspin.txt .
         fi
@@ -612,9 +612,9 @@ make_gridpack () {
         #######################
         #Run the integration and generate the grid
         #######################
-        
+
         echo "starting LO mode"
-        
+
         echo "done" > makegrid.dat
         echo "set gridpack True" >> makegrid.dat
         if [ -e $CARDSDIR/${name}_customizecards.dat ]; then
@@ -622,13 +622,13 @@ make_gridpack () {
             echo "" >> makegrid.dat
         fi
         echo "done" >> makegrid.dat
-        
+
         #   set +e
         cat makegrid.dat | ./bin/generate_events pilotrun
         echo "finished pilot run"
-        
+
         cd $WORKDIR
-        
+
         #   echo "creating debug tarball"
         #   cp ${LOGFILE} ./gridpack_generation.log
         #   DEBUGTARBALL=${name}_debug_tarball.tar.gz
@@ -636,7 +636,7 @@ make_gridpack () {
         #   echo "moving tarball to ${PRODHOME}/${DEBUGTARBALL}"
         #   mv ${DEBUGTARBALL} ${PRODHOME}/${DEBUGTARBALL}
         #   set -e
-        
+
         echo "cleaning temporary output"
         mv $WORKDIR/processtmp/pilotrun_gridpack.tar.gz $WORKDIR/
         rm -rf processtmp
@@ -646,19 +646,19 @@ make_gridpack () {
         tar -xzf $WORKDIR/pilotrun_gridpack.tar.gz
         echo "cleaning temporary gridpack"
         rm $WORKDIR/pilotrun_gridpack.tar.gz
-        
+
         # as of mg29x, it does not generate any event if 'True = gridpack' in the run card
         # generate a few events manually
         ./run.sh 1000 234567 # nevents seed
         mv events.lhe.gz $WORKDIR/unweighted_events.lhe.gz
-        
+
         # precompile reweighting if necessary
         if [ -e $CARDSDIR/${name}_reweight_card.dat ]; then
             echo "preparing reweighting step"
             prepare_reweight $isnlo $WORKDIR $scram_arch $CARDSDIR/${name}_reweight_card.dat
             extract_width $isnlo $WORKDIR $CARDSDIR ${name}
         fi
-        
+
         #prepare madspin grids if necessary
         if [ -e $CARDSDIR/${name}_madspin_card.dat ]; then
             echo "import $WORKDIR/unweighted_events.lhe.gz" > madspinrun.dat
@@ -667,40 +667,40 @@ make_gridpack () {
             rm madspinrun.dat
             rm -rf tmp*
         fi
-        
+
         echo "preparing final gridpack"
-        
+
         #set to single core mode
         echo "mg5_path = ../../mgbasedir" >> ./madevent/Cards/me5_configuration.txt
         echo "cluster_temp_path = None" >> ./madevent/Cards/me5_configuration.txt
         echo "run_mode = 0" >> ./madevent/Cards/me5_configuration.txt
-        
+
         cd $WORKDIR
-        
+
         mkdir gridpack
         mv process gridpack/process
         cp -a $MGBASEDIRORIG/ gridpack/mgbasedir
-        
+
         cd gridpack
-        
+
         cp $PRODHOME/runcmsgrid_LO.sh ./runcmsgrid.sh
     fi
-    
+
     sed -i s/SCRAM_ARCH_VERSION_REPLACE/${scram_arch}/g runcmsgrid.sh
     sed -i s/CMSSW_VERSION_REPLACE/${cmssw_version}/g runcmsgrid.sh
-    
+
     pdfExtraArgs=""
     if [ $is5FlavorScheme -eq 1 ]; then
         pdfExtraArgs+="--is5FlavorScheme "
     fi
-    
+
     pdfSysArgs=$(python3 ${script_dir}/getMG5_aMC_PDFInputs.py -f systematics -c run3 $pdfExtraArgs)
     sed -i s/PDF_SETS_REPLACE/${pdfSysArgs}/g runcmsgrid.sh
-    
-    
+
+
     #clean unneeded files for generation
     ${helpers_dir}/cleangridmore.sh
-    
+
     #
     #Plan to decay events from external tarball?
     #
@@ -717,11 +717,18 @@ make_gridpack () {
         cd ..
         rm $tarname
     fi
-    
+
     # copy merge.pl from Utilities to allow merging LO events
     cd $WORKDIR/gridpack
     cp $PRODHOME/Utilities/merge.pl .
-    
+
+    # [NLO_Gridpack] generate the pointer file
+    if [ "$isnlo" -gt "0" ]; then
+        cp $PRODHOME/mk_workdir.py .
+        chmod 777 runcmsgrid.sh
+        tar -zcvf ${PRODHOME}/${name}_${scram_arch}_${cmssw_version}_pointer.gz runcmsgrid.sh mk_workdir.py
+        echo "Pointer file for the NLO ReadOnly gridpack is created successfully at ${PRODHOME}/${name}_${scram_arch}_${cmssw_version}_pointer.tar.xz"
+    fi
 }
 
 #exit on first error
@@ -878,7 +885,7 @@ if [ "${name}" != "interactive" ]; then
     fi
     # Re-enable set -e
     set -e
-    
+
     echo "Saving log file(s)"
     cd $WORKDIR/gridpack
     for i in ${LOGFILE_NAME}*.log; do
