@@ -50,6 +50,7 @@ make_tarball () {
     fi
     # [ NLO_Gridpack ] ReadOnly mode
     chmod -R 555 $WORKDIR/gridpack
+    chmod -R 555 mgbasedir
     XZ_OPT="$XZ_OPT" tar -cJpf ${PRODHOME}/${name}_${scram_arch}_${cmssw_version}_tarball.tar.xz mgbasedir process runcmsgrid.sh gridpack_generation*.log InputCards $EXTRA_TAR_ARGS
     # [ NLO_Gridpack ] Remove ReadOnly of the directory
     chmod -R 777 $WORKDIR/gridpack
