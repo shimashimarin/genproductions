@@ -186,9 +186,8 @@ make_gridpack () {
         #############################################
         #Copy, Unzip and Delete the MadGraph tarball#
         #############################################
-        # wget --no-check-certificate ${MGSOURCE}
-        # tar axf mg5amcnlo.tar.gz
-        tar axf /eos/lyoeos.in2p3.fr/home/jxiao/gen/mg5amcnlo.tar.gz
+        wget --no-check-certificate ${MGSOURCE}
+        tar axf mg5amcnlo.tar.gz
         mv mg5amcnlo $MGBASEDIRORIG
 
         #############################################

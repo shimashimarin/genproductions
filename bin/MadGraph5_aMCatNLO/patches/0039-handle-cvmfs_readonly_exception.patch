@@ -1,0 +1,35 @@
+diff --git a/MadSpin/interface_madspin.py b/MadSpin/interface_madspin.py
+index de529f3..e1d301e
+--- a/MadSpin/interface_madspin.py
++++ b/MadSpin/interface_madspin.py
+@@ -787,7 +787,7 @@ class MadSpinInterface(extended_cmd.Cmd):
+                                                             self.options['ms_dir']):
+                     os.remove(name)    
+                 self.readonly = False
+-            except (PermissionError,FileNotFoundError):
++            except (PermissionError,FileNotFoundError,OSError):
+                 self.readonly = True
+                 open('seeds.dat','w').write('%s\n'%self.options['seed']) 
+         generate_all.ending_run()
+diff --git a/MadSpin/decay.py b/MadSpin/decay.py
+index 26821c7..328187e
+--- a/MadSpin/decay.py
++++ b/MadSpin/decay.py
+@@ -2301,7 +2301,7 @@ class decay_all_events(object):
+         if self.options['ms_dir']:
+             try:
+                 self.outputfile = open(pjoin(self.options['curr_dir'],'decayed_events.lhe'), 'w')
+-            except (PermissionError, FileNotFoundError):
++            except (PermissionError, FileNotFoundError, OSError):
+                 self.outputfile = open('decayed_events.lhe', 'w')
+                 self.readonly = True
+                 self.setupseed_forreadonly(self.options['seed'])
+@@ -3520,7 +3520,7 @@ class decay_all_events(object):
+                         try:
+                             ranmar_file=pjoin(path,'ranmar_state.dat')
+                             ranmar=open(ranmar_file, 'w')
+-                        except (PermissionError,FileNotFoundError):
++                        except (PermissionError,FileNotFoundError,OSError):
+                             if not self.readonly:
+                                 raise
+                             a, d = os.path.split(path)
