@@ -26,7 +26,7 @@ if [ "$use_gridpack_env" = true ]
         scram_arch_version=SCRAM_ARCH_VERSION_REPLACE
     fi
     echo "%MSG-MG5 SCRAM_ARCH version = $scram_arch_version"
-    
+
     if [ -n "$6" ]
     then
         cmssw_version=${6}
@@ -68,26 +68,15 @@ fi
 if [ "$doReadOnly" -gt "0" ]; then
     # [ runcmsgrid.sh ] ReadOnly mode: create links to gridpack, madgraph
     WORKDIR="${LHEWORKDIR}/workdir"
-    GRIDPACK="/eos/lyoeos.in2p3.fr/scratch/jxiao_dl/gp/untar"
-    # MADGRAPH="/eos/lyoeos.in2p3.fr/scratch/jxiao_dl/mg5amcnlo"
-    ${LHEWORKDIR}/mk_workdir.py -i $GRIDPACK -o $WORKDIR
-    # cd $WORKDIR
-    # ${LHEWORKDIR}/mk_workdir.py -i $MADGRAPH -o mgbasedir
-    # cd mgbasedir
-    # # link models to the MG5
-    # rm -r models
-    # ${LHEWORKDIR}/mk_workdir.py -i $GRIDPACK/models -o models
-    cd $WORKDIR/process
-    #[ runcmsgrid.sh ] ReadOnly mode: replace some linked files
-    cat ./Cards/amcatnlo_configuration.txt >tmp_amcatnlo_configuration.txt
-    unlink ./Cards/amcatnlo_configuration.txt
-    mv tmp_amcatnlo_configuration.txt ./Cards/amcatnlo_configuration.txt
+    mkdir -p $WORKDIR
+    GRIDPACK="/cvmfs/cms.cern.ch/phys_generator/gridpacks/2017/13TeV/madgraph/GenValidation/V299/WJETS_FXFX/test2/untar"
 else
+    GRIDPACK="${LHEWORKDIR}"
     WORKDIR="${LHEWORKDIR}"
     # only models folder is saved to gridpack, so the Madgraph5 is from external places
     chmod -R 777 $LHEWORKDIR/process # switch off ReadOnly mode
     cd $LHEWORKDIR/process
-    
+
     echo "madspin=OFF" >runscript.dat
     echo "reweight=OFF" >>runscript.dat
     echo "done" >>runscript.dat
@@ -105,32 +94,21 @@ else
     echo "done" >>runscript.dat
 fi
 
-echo "lhapdf_py3 = $LHAPDFCONFIG" >> ./Cards/amcatnlo_configuration.txt
-# echo "cluster_local_path = `${LHAPDFCONFIG} --datadir`" >> ./Cards/amcatnlo_configuration.txt
-
-echo "run_mode = 2" >> ./Cards/amcatnlo_configuration.txt
-echo "nb_core = $ncpu" >> ./Cards/amcatnlo_configuration.txt
-
 domadspin=0
 if [ -f ./Cards/tmp_madspin_card ]; then
     if [ "$doReadOnly" -gt "0" ]; then
         # [ runcmsgrid.sh ] MG5 will try to move madspin_card.dat to .madspin_card.dat
         # [ runcmsgrid.sh ] use tmp_madspin_card to avoid this, since this break the ReadOnly mode
-        cat ./Cards/tmp_madspin_card > tmp_madspin_card2
-        unlink ./Cards/tmp_madspin_card
-        mv tmp_madspin_card2 ./Cards/tmp_madspin_card
+        cd $WORKDIR
+        cat $GRIDPACK/process/Cards/tmp_madspin_card > tmp_madspin_card2
         # set random seed for madspin
-        sed -i "/set.*seed/d" ./Cards/tmp_madspin_card # delete existing lines contain set seed 
-        echo "$(echo $(echo "set seed ${rnum}") | cat - ./Cards/tmp_madspin_card)" >./Cards/tmp_madspin_card
-        # set ms_dir
-        sed -i "s/^\s*set\s*ms_dir.*$/set ms_dir ..\/..\/process\/madspin/" ./Cards/tmp_madspin_card
+        sed -i "/set.*seed/d" tmp_madspin_card2 # delete existing lines contain set seed
+        echo "$(echo $(echo "set seed ${rnum}") | cat - tmp_madspin_card2)" >tmp_madspin_card2
+        # set ms_dir to the madspin folder in GRIDPACK
+        sed "s|^.*ms_dir.*$|set ms_dir $GRIDPACK/process/madspin|g" -i tmp_madspin_card2
         # import events.lhe
-        sed -i "/import.*events/d" ./Cards/tmp_madspin_card # delete existing lines contain import events 
-        echo "$(echo $(echo "import ./events.lhe") | cat - ./Cards/tmp_madspin_card)" >./Cards/tmp_madspin_card
-        # [ runcmsgrid.sh ] set the permission of $WORKDIR/process to ReadOnly
-        # [ runcmsgrid.sh ] or it will write decayed.lhe to the process/madspin
-        # [ runcmsgrid.sh ] then the code will not consider it's rReadOnly
-        chmod -R 555 $WORKDIR/process
+        sed -i "/import.*events/d" tmp_madspin_card2 # delete existing lines contain import events
+        echo "$(echo $(echo "import ./events.lhe") | cat - tmp_madspin_card2)" >tmp_madspin_card2
         domadspin=1
     else
         #set random seed for madspin
@@ -141,7 +119,7 @@ if [ -f ./Cards/tmp_madspin_card ]; then
 fi
 
 doreweighting=0
-if [ -f ./Cards/reweight_card.dat ]; then
+if [ -f $GRIDPACK/process/Cards/reweight_card.dat ]; then
     doreweighting=1
 fi
 
@@ -157,13 +135,9 @@ fi
 
 #First check if normal operation with MG5_aMCatNLO events is planned
 if [ ! -e $LHEWORKDIR/header_for_madspin.txt ]; then
-  
+
     if [ "$doReadOnly" -gt "0" ]; then
-        # [ runcmsgrid.sh ] ReadOnly mode: hide the madspin_card.dat when run ./bin/run.sh
-        if [ -e $WORKDIR/process/Cards/madspin_card.dat ]; then
-            mv $WORKDIR/process/Cards/madspin_card.dat $WORKDIR/process/Cards/.madspin_card.dat
-        fi
-        $WORKDIR/process/bin/run.sh $nevt $rnum
+        $GRIDPACK/process/bin/run.sh $nevt $rnum
     else
         cat runscript.dat | ./bin/generate_events -ox -n $runname
     fi
@@ -193,7 +167,7 @@ if [ ! -e $LHEWORKDIR/header_for_madspin.txt ]; then
         #when MADSPIN=OFF is applied, mg5_aMC moves madspin_card.dat to .madspin_card.dat
         if [ "$doReadOnly" -gt "0" ]; then
             # [ runcmsgrid.sh ] ReadOnly mode: run MadSpin
-            ../../mgbasedir/MadSpin/madspin $WORKDIR/process/Cards/tmp_madspin_card
+            $GRIDPACK/mgbasedir/MadSpin/madspin < $WORKDIR/tmp_madspin_card2
         else
             echo "import events.lhe" >madspinrun.dat
             cat ./Cards/tmp_madspin_card >>madspinrun.dat
@@ -269,26 +243,23 @@ else
         }" cmsgrid_final.lhe
         rm initrwgt.txt
     fi
-    
+
 fi
 
 cd $LHEWORKDIR
-sed -i -e '/<mgrwgt/,/mgrwgt>/d' ${runname}_final.lhe 
+sed -i -e '/<mgrwgt/,/mgrwgt>/d' ${runname}_final.lhe
 
-# check lhe output  
-mv ${LHEWORKDIR}/${runname}_final.lhe ${LHEWORKDIR}/test.lhe 
-echo -e "\nRun xml check" 
-xmllint --stream --noout ${LHEWORKDIR}/test.lhe ; test $? -eq 0 || exit 1 
-echo "Number of weights that are NaN:" 
-grep  NaN  ${LHEWORKDIR}/test.lhe | grep "</wgt>" | wc -l ; test $? -eq 0 || exit 1 
-echo -e "All checks passed \n" 
+# check lhe output
+mv ${LHEWORKDIR}/${runname}_final.lhe ${LHEWORKDIR}/test.lhe
+echo -e "\nRun xml check"
+xmllint --stream --noout ${LHEWORKDIR}/test.lhe ; test $? -eq 0 || exit 1
+echo "Number of weights that are NaN:"
+grep  NaN  ${LHEWORKDIR}/test.lhe | grep "</wgt>" | wc -l ; test $? -eq 0 || exit 1
+echo -e "All checks passed \n"
 
-# copy output and print directory 
+# copy output and print directory
 mv ${LHEWORKDIR}/test.lhe ${LHEWORKDIR}/${runname}_final.lhe
 ls -l
 
-# [ runcmsgrid.sh ] Switch OFF the $WORKDIR ReadOnly
-chmod -R 777 $WORKDIR
-
-# exit 
+# exit
 exit 0
