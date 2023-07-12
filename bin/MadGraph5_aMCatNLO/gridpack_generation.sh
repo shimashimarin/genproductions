@@ -317,7 +317,7 @@ make_gridpack () {
         # [NLO_Gridpack] detect NLO mode or LO mode
         isnlo=0
         # [NLO_Gridpack] use regexpr: should find one line starts with "generate" and also includes "[QCD]"
-        while read -r line; do if [[ "$line" =~ ^(\s*generate.+)(\[QCD].+) ]]; then isnlo=1; echo "NLO mode detected from: "$line" ===> isnlo="$isnlo; fi done < ${name}_proc_card.dat
+        while read -r line; do if [[ "$line" =~ ^(\s*generate.+)(\[QCD]?.+) ]]; then isnlo=1; echo "NLO mode detected from: "$line" ===> isnlo="$isnlo; fi done < ${name}_proc_card.dat
 
         #*FIXME* workaround for broken cluster_local_path & lhapdf_py3 handling.
         # This needs to happen before the code-generation step, as fortran templates
